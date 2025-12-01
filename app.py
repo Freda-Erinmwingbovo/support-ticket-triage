@@ -8,6 +8,7 @@ from datetime import datetime
 from huggingface_hub import hf_hub_download
 import os
 import re
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="ML Support Brain",
@@ -136,9 +137,27 @@ with col1:
     st.markdown("### *Body* <span style='color:red'>*</span>", unsafe_allow_html=True)
     body = st.text_area("", placeholder="Paste full customer message here...", key="body", height=200, label_visibility="collapsed")
 
-    # 💡 Hidden developer note (not shown to users)
-    # Use Shift+Enter to insert a new line inside Subject or Body.
-    # TRIAGE button enabled only when both fields are filled.
+    # ------------------------- Hidden JS for Enter/Shift+Enter -------------------------
+    components.html("""
+    <script>
+    const subjectInput = window.parent.document.querySelector('textarea[id^="subject"]');
+    const bodyInput = window.parent.document.querySelector('textarea[id^="body"]');
+
+    function handleEnter(e, nextInput) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            nextInput.focus();
+        }
+    }
+
+    if (subjectInput && bodyInput) {
+        subjectInput.addEventListener('keydown', (e) => handleEnter(e, bodyInput));
+        bodyInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) e.preventDefault();
+        });
+    }
+    </script>
+    """, height=0, scrolling=False)
 
 with col2:
     queue_hint = st.text_input("Current Queue (optional)", placeholder="e.g. billing, technical")
