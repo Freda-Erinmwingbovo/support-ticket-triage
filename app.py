@@ -136,13 +136,9 @@ with col1:
     st.markdown("### *Body* <span style='color:red'>*</span>", unsafe_allow_html=True)
     body = st.text_area("", placeholder="Paste full customer message here...", key="body", height=200, label_visibility="collapsed")
 
-    # Disclaimer about Shift+Enter
-    st.markdown("""
-    <div style="font-size:0.9em; color:gray; margin-bottom:10px;">
-    💡 Use <b>Shift+Enter</b> to insert a new line inside Subject or Body.<br>
-    The TRIAGE button will only be enabled once both fields are filled.
-    </div>
-    """, unsafe_allow_html=True)
+    # 💡 Hidden developer note (not shown to users)
+    # Use Shift+Enter to insert a new line inside Subject or Body.
+    # TRIAGE button enabled only when both fields are filled.
 
 with col2:
     queue_hint = st.text_input("Current Queue (optional)", placeholder="e.g. billing, technical")
