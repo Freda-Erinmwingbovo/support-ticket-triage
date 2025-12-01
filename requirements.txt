@@ -3,4 +3,6 @@ pandas
 scikit-learn
 joblib
 plotly
+huggingface_hub
+
 openpyxl
