@@ -172,17 +172,6 @@ with col2:
     queue_hint = st.text_input("Current Queue (optional)", placeholder="e.g. billing, technical")
 
 # ========================= TRIAGE =========================
-subject_filled = bool(subject.strip())
-body_filled = bool(body.strip())
-
-# Show warnings dynamically
-if not subject_filled and body_filled:
-    st.warning("⚠️ Subject is required before submitting.")
-elif subject_filled and not body_filled:
-    st.warning("⚠️ Body is required before submitting.")
-elif not subject_filled and not body_filled:
-    st.warning("⚠️ Both Subject and Body are required to triage a ticket.")
-
 if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, disabled=not (subject and body)):
     with st.spinner("Analyzing ticket..."):
         result = predict_ticket(subject, body, queue_hint,
@@ -207,8 +196,7 @@ if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, dis
     else:
         st.warning("No auto-routing — model is not confident enough")
 
-st.caption("Built solo in 3.5 weeks • Safer & smarter than Zendesk AI • Production-ready today")
-
+st.caption("Built solo in 2 weeks • Safe & Safe • Production-ready today")
 
 
 
