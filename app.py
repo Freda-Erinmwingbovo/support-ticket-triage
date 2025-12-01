@@ -8,7 +8,6 @@ from datetime import datetime
 from huggingface_hub import hf_hub_download
 import os
 import re
-import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="ML Support Brain",
@@ -133,31 +132,15 @@ st.markdown("*The smartest, safest support AI ever built*")
 col1, col2 = st.columns([2,1])
 with col1:
     st.markdown("### *Subject* <span style='color:red'>*</span>", unsafe_allow_html=True)
-    subject = st.text_area("", placeholder="Type the subject here...", key="subject", height=50, label_visibility="collapsed")
+    # Use text_input for Subject → Enter jumps to Body
+    subject = st.text_input("", placeholder="Type the subject here...", key="subject", label_visibility="collapsed")
+
     st.markdown("### *Body* <span style='color:red'>*</span>", unsafe_allow_html=True)
+    # Use text_area for Body → Enter & Shift+Enter create newline naturally
     body = st.text_area("", placeholder="Paste full customer message here...", key="body", height=200, label_visibility="collapsed")
 
-    # ------------------------- Hidden JS for Enter/Shift+Enter -------------------------
-    components.html("""
-    <script>
-    const subjectInput = window.parent.document.querySelector('textarea[id^="subject"]');
-    const bodyInput = window.parent.document.querySelector('textarea[id^="body"]');
-
-    function handleEnter(e, nextInput) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            nextInput.focus();
-        }
-    }
-
-    if (subjectInput && bodyInput) {
-        subjectInput.addEventListener('keydown', (e) => handleEnter(e, bodyInput));
-        bodyInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) e.preventDefault();
-        });
-    }
-    </script>
-    """, height=0, scrolling=False)
+    # 💡 Hidden developer note: Subject Enter → jumps to Body; Body Enter → newline
+    # TRIAGE button enabled only when both fields filled
 
 with col2:
     queue_hint = st.text_input("Current Queue (optional)", placeholder="e.g. billing, technical")
@@ -195,4 +178,7 @@ if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, dis
     else:
         st.warning("No auto-routing — model is not confident enough")
 
-st.caption("Built solo in 3.5 weeks • Safer & smarter than Zendesk AI • Production-ready today")
+st.caption("Built solo in 2 weeks • Safe & Smart AI • Production-ready today")
+
+
+
