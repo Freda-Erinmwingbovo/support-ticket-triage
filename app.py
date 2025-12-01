@@ -15,8 +15,8 @@ def load_models():
     # YOUR HF DATASET URL (FredaErins/support-triage-models)
     base_url = "https://huggingface.co/datasets/FredaErins/support-triage-models/resolve/main"
     model_files = [
-        "ticket_type_classifier_PROD_compressed.pkl",
         "priority_classifier_PROD_compressed.pkl",
+        "queue_routing_PROD_compressed.pkl",
         "queue_routing_PROD_compressed.pkl"
     ]
     
@@ -137,3 +137,4 @@ if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, dis
         st.warning("No auto-routing — model is not confident enough")
 
 st.caption("Built solo in 3.5 weeks • Safer & smarter than Zendesk AI • Production-ready today")
+
