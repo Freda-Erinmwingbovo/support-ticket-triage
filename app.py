@@ -136,6 +136,14 @@ with col1:
     st.markdown("### *Body* <span style='color:red'>*</span>", unsafe_allow_html=True)
     body = st.text_area("", placeholder="Paste full customer message here...", key="body", height=200, label_visibility="collapsed")
 
+    # Disclaimer about Shift+Enter
+    st.markdown("""
+    <div style="font-size:0.9em; color:gray; margin-bottom:10px;">
+    💡 Use <b>Shift+Enter</b> to insert a new line inside Subject or Body.<br>
+    The TRIAGE button will only be enabled once both fields are filled.
+    </div>
+    """, unsafe_allow_html=True)
+
 with col2:
     queue_hint = st.text_input("Current Queue (optional)", placeholder="e.g. billing, technical")
 
@@ -172,5 +180,4 @@ if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, dis
     else:
         st.warning("No auto-routing — model is not confident enough")
 
-st.caption("Built solo in 2 weeks • Safer & smart AI • Production-ready today")
-
+st.caption("Built solo in 3.5 weeks • Safer & smarter than Zendesk AI • Production-ready today")
