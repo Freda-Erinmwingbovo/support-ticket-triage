@@ -172,6 +172,20 @@ with col2:
     queue_hint = st.text_input("Current Queue (optional)", placeholder="e.g. billing, technical")
 
 # ========================= DISCLAIMER & TRIAGE BUTTON =========================
+st.markdown("""
+<div style="font-size:0.9em; color:gray; margin-bottom:10px;">
+💡 Use <b>Shift+Enter</b> to insert a new line inside Subject or Body.<br>
+The TRIAGE button is only enabled once both fields are filled.
+</div>
+""", unsafe_allow_html=True)
+
+# Disable TRIAGE button until both fields are filled
+triage_disabled = not (subject.strip() and body.strip())
+
+if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, disabled=triage_disabled):
+    # ... your triage logic
+
+
 subject_filled = bool(subject.strip())
 body_filled = bool(body.strip())
 
@@ -207,17 +221,11 @@ if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, dis
     else:
         st.warning("No auto-routing — model is not confident enough")
 
+
+
+
+
+
 st.caption("Built solo in 2 weeks • Safe & Safe • Production-ready today")
-
-
-
-
-
-
-
-
-
-
-
 
 
