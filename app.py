@@ -23,9 +23,22 @@ def load_models():
     repo = "FredaErins/support-triage-models"
 
     try:
-        p_type = hf_hub_download(repo_id=repo, filename="ticket_type_classifier_PROD_compressed.pkl")
-        p_priority = hf_hub_download(repo_id=repo, filename="priority_classifier_PROD_compressed.pkl")
-        p_queue = hf_hub_download(repo_id=repo, filename="queue_routing_PROD_compressed.pkl")  # FIXED NAME
+        p_type = hf_hub_download(
+            repo_id=repo,
+            filename="ticket_type_classifier_PROD_compressed.pkl",
+            repo_type="dataset"
+        )
+        p_priority = hf_hub_download(
+            repo_id=repo,
+            filename="priority_classifier_PROD_compressed.pkl",
+            repo_type="dataset"
+        )
+        p_queue = hf_hub_download(
+            repo_id=repo,
+            filename="queue_routing_PROD_compressed.pkl",
+            repo_type="dataset"
+        )
+
     except Exception as e:
         st.error(f"❌ Failed to download models: {e}")
         st.stop()
@@ -35,6 +48,7 @@ def load_models():
         joblib.load(p_priority),
         joblib.load(p_queue)
     )
+
 
 
 model_type, model_priority, model_queue = load_models()
@@ -187,3 +201,4 @@ if st.button("TRIAGE THIS TICKET", use_container_width=True):
         st.balloons()
 
 st.caption("Built solo in 3.5 weeks • Production-ready.")
+
