@@ -1,8 +1,5 @@
-streamlit>=1.35.0
+streamlit
 pandas
 scikit-learn
 joblib
-plotly
 huggingface_hub
-
-openpyxl
