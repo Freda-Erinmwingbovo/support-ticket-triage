@@ -50,11 +50,13 @@ def load_models():
     )
 
 
+
 model_type, model_priority, model_queue = load_models()
 
 
 # ========================= TEXT CLEANING & PREDICTION =========================
 def clean_text(t):
+    import re
     if pd.isna(t): return ""
     t = str(t).lower()
     t = re.sub(r"[^a-z0-9\s]", " ", t)
@@ -74,17 +76,17 @@ def predict_ticket(subject="", body="", queue="", th_priority=0.80, th_queue=0.8
         'priority': "Medium"
     }])
 
-    # Model 1: Ticket Type
+    # Model 1
     ticket_type = model_type.predict(df[['text', 'queue', 'priority']])[0]
     type_conf = model_type.predict_proba(df[['text', 'queue', 'priority']])[0].max()
     df['ticket_type'] = ticket_type
 
-    # Model 2: Priority
+    # Model 2
     priority_input = df[['text', 'queue', 'ticket_type']]
     priority = model_priority.predict(priority_input)[0]
     priority_conf = model_priority.predict_proba(priority_input)[0].max()
 
-    # Model 3: Queue
+    # Model 3
     queue_input = pd.DataFrame([{'text': text, 'ticket_type': ticket_type, 'priority': priority}])
     pred_queue = model_queue.predict(queue_input[['text', 'ticket_type', 'priority']])[0]
     queue_conf = model_queue.predict_proba(queue_input)[0].max()
@@ -161,27 +163,16 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("### *Subject* <span style='color:red'>*</span>", unsafe_allow_html=True)
     subject = st.text_input("", placeholder="e.g. Can't login after update", key="subject", label_visibility="collapsed")
-
+    if not subject: st.error("Subject is required")
     st.markdown("### *Body* <span style='color:red'>*</span>", unsafe_allow_html=True)
     body = st.text_area("", height=200, placeholder="Paste the full customer message here...", key="body", label_visibility="collapsed")
+    if not body: st.error("Body is required")
 
 with col2:
     queue_hint = st.text_input("Current Queue (optional)", placeholder="e.g. billing, technical")
 
-# ========================= DISCLAIMER & TRIAGE BUTTON =========================
-subject_filled = bool(subject.strip())
-body_filled = bool(body.strip())
-
-# Show warnings dynamically
-if not subject_filled and body_filled:
-    st.warning("⚠️ Subject is required before submitting.")
-elif subject_filled and not body_filled:
-    st.warning("⚠️ Body is required before submitting.")
-elif not subject_filled and not body_filled:
-    st.warning("⚠️ Both Subject and Body are required to triage a ticket.")
-
-# Disable button if either field is missing
-if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, disabled=not (subject_filled and body_filled)):
+# ========================= TRIAGE =========================
+if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, disabled=not (subject and body)):
     with st.spinner("Analyzing ticket..."):
         result = predict_ticket(subject, body, queue_hint,
                                 st.session_state.th_p, st.session_state.th_q)
@@ -206,3 +197,16 @@ if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, dis
         st.warning("No auto-routing — model is not confident enough")
 
 st.caption("Built solo in 3.5 weeks • Safer & smarter than Zendesk AI • Production-ready today")
+
+
+
+
+
+
+
+
+
+
+
+
+
