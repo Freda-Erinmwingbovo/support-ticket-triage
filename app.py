@@ -20,7 +20,7 @@ def load_models():
     os.makedirs("models", exist_ok=True)
     
     # Direct links to your compressed models on Hugging Face
-    base_url = "https://huggingface.co/datasets/fredaerinmwingbovo/support-models/resolve/main"
+    base_url = "https://huggingface.co/datasets/fredaerinmwingbovo/support-models/tree/main"
     model_files = [
         "ticket_type_classifier_PROD_compressed.pkl",
         "priority_classifier_PROD_compressed.pkl",
@@ -185,3 +185,4 @@ if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, dis
         st.warning("No auto-routing — model is not confident enough")
 
 st.caption("Built solo in 3.5 weeks • Safer & smarter than Zendesk AI • Production-ready today")
+
