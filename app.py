@@ -1,15 +1,18 @@
 # ============================================================
-# app.py — FINAL PERFECTION — DEC 2025
+# app.py — FINAL | NIGERIA GMT+1 | PRODUCTION SAFE | DEC 2025
 # Live: https://support-ticket-triage.streamlit.app/
 # ============================================================
 import streamlit as st
 import pandas as pd
 import joblib
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from huggingface_hub import hf_hub_download
 import os
 import re
 import streamlit.components.v1 as components
+
+# ------------------------- NIGERIA TIME (GMT+1) -------------------------
+WAT = timezone(timedelta(hours=1))  # West Africa Time
 
 # ------------------------- PAGE CONFIG -------------------------
 st.set_page_config(page_title="ML Support Brain", page_icon="rocket", layout="wide")
@@ -46,17 +49,14 @@ def predict_ticket(subject="", body="", queue="", th_priority=0.80, th_queue=0.8
     text = clean_text(subject + " " + body)
     df = pd.DataFrame([{'text': text, 'queue': str(queue).strip() if queue else "General", 'priority': "Medium"}])
 
-    # Type
     ticket_type = model_type.predict(df[['text','queue','priority']])[0]
     type_conf = model_type.predict_proba(df[['text','queue','priority']])[0].max()
     df['ticket_type'] = ticket_type
 
-    # Priority
     pr_input = df[['text','queue','ticket_type']]
     priority = model_priority.predict(pr_input)[0]
     pr_conf = model_priority.predict_proba(pr_input)[0].max()
 
-    # Queue
     q_input = pd.DataFrame([{'text': text,'ticket_type': ticket_type,'priority': priority}])
     pred_queue = model_queue.predict(q_input[['text','ticket_type','priority']])[0]
     q_conf = model_queue.predict_proba(q_input)[0].max()
@@ -83,17 +83,18 @@ def predict_ticket(subject="", body="", queue="", th_priority=0.80, th_queue=0.8
         "auto_route_to": auto_queue, "final_action": final_action
     }
 
-# ------------------------- SAVE + HISTORY -------------------------
+# ------------------------- LOGGING & HISTORY -------------------------
 LOG_FILE = "data/prediction_log.csv"
 os.makedirs("data", exist_ok=True)
 if not os.path.exists(LOG_FILE):
     pd.DataFrame(columns=["timestamp","subject","ticket_type","priority","queue","auto_queue","action"]).to_csv(LOG_FILE, index=False)
 
 def save_and_log(subject, result):
-    # CSV log
+    now = datetime.now(WAT)
+    # Permanent CSV log (never cleared)
     log_df = pd.read_csv(LOG_FILE)
     new_row = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
         "subject": subject[:100],
         "ticket_type": result["ticket_type"],
         "priority": result["auto_set_priority"] or result["predicted_priority"],
@@ -104,9 +105,9 @@ def save_and_log(subject, result):
     log_df = pd.concat([log_df, pd.DataFrame([new_row])], ignore_index=True)
     log_df.to_csv(LOG_FILE, index=False)
 
-    # In-memory history for UI
+    # In-memory session history (for UI + demo)
     st.session_state.history.append({
-        "Time": datetime.now().strftime("%H:%M:%S"),
+        "Time": now.strftime("%H:%M:%S"),
         "Subject": subject[:45] + "..." if len(subject) > 45 else subject,
         "Type": result["ticket_type"],
         "Priority": (result["auto_set_priority"] or result["predicted_priority"] or "—").upper(),
@@ -117,7 +118,6 @@ def save_and_log(subject, result):
 # ------------------------- TABS -------------------------
 tab1, tab2 = st.tabs(["Triager", "History"])
 
-# ========================= TRIAGER TAB =========================
 with tab1:
     st.title("Live Support Ticket Auto-Triage Engine")
     st.markdown("*The smartest, safest support AI ever built*")
@@ -128,8 +128,6 @@ with tab1:
         subject = st.text_area("", placeholder="Type the subject here...", key="subject", height=50, label_visibility="collapsed")
         st.markdown("### *Body* <span style='color:red'>*</span>", unsafe_allow_html=True)
         body = st.text_area("", placeholder="Paste full customer message here...", key="body", height=220, label_visibility="collapsed")
-
-        # JS: Enter → next field
         components.html("""
         <script>
         const subjectInput = window.parent.document.querySelector('textarea[id^="subject"]');
@@ -145,17 +143,13 @@ with tab1:
         }
         </script>
         """, height=0)
-
     with col2:
         queue_hint = st.text_input("Current Queue (optional)", placeholder="e.g. billing, technical")
 
-    subject_ok = bool(subject.strip())
-    body_ok = bool(body.strip())
-
-    if not (subject_ok and body_ok):
+    if not (bool(subject.strip()) and bool(body.strip())):
         st.warning("Both Subject and Body are required")
 
-    if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, disabled=not (subject_ok and body_ok)):
+    if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, disabled=not (bool(subject.strip()) and bool(body.strip()))):
         with st.spinner("Analyzing ticket..."):
             result = predict_ticket(subject, body, queue_hint, st.session_state.th_p, st.session_state.th_q)
             save_and_log(subject, result)
@@ -173,29 +167,35 @@ with tab1:
         else:
             st.warning("No auto-routing — model not confident enough")
 
-# ========================= HISTORY TAB =========================
 with tab2:
     st.header("Triage History")
     if st.session_state.history:
         df_hist = pd.DataFrame(st.session_state.history)
         st.dataframe(df_hist, use_container_width=True, hide_index=True)
-        if st.button("Clear History (session only)", type="secondary"):
-            st.session_state.history = []
-            st.rerun()
-    else:
-        st.info("No tickets triaged yet → start in the **Triager** tab!")
 
-# ------------------------- SIDEBAR -------------------------
+        # DEMO-ONLY CLEAR BUTTON (comment out in production)
+        # if st.button("Clear History (demo only)", type="secondary"):
+        #     st.session_state.history = []
+        #     st.rerun()
+
+        st.caption("Clear button disabled in production • All data permanently logged")
+    else:
+        st.info("No tickets triaged yet → go to **Triager** tab!")
+
+# ------------------------- SIDEBAR (PERMANENT STATS) -------------------------
 with st.sidebar:
     st.image("https://em-content.zobj.net/source/skype/289/rocket_1f680.png", width=100)
     st.title("ML Support Brain")
     st.caption("Type → Priority → Queue • 88.8% accuracy")
 
     log_df = pd.read_csv(LOG_FILE)
-    st.metric("Total Processed", len(log_df))
-    if len(log_df) > 0:
-        auto_rate = (log_df["auto_queue"].sum() / len(log_df)) * 100
-        st.metric("Auto-Routed Rate", f"{auto_rate:.1f}%")
+    total_all_time = len(log_df)
+    st.metric("Total Processed (all time)", total_all_time)
+    if total_all_time > 0:
+        auto_rate = (log_df["auto_queue"].sum() / total_all_time) * 100
+        st.metric("Auto-Routed Rate (all time)", f"{auto_rate:.1f}%")
+
+    st.metric("This session", len(st.session_state.history))
 
     st.divider()
     st.info("*Global Thresholds*\n• Lower = more automation\n• Current = ultra-safe (~30%)")
@@ -203,13 +203,13 @@ with st.sidebar:
     st.session_state.th_q = st.slider("Auto-Queue Threshold", 0.50, 1.00, 0.85, 0.01)
 
 # ------------------------- GORGEOUS FOOTER -------------------------
-st.markdown("<br><br><br><br>", unsafe_allow_html=True)  # space
+st.markdown("<br><br><br><br>", unsafe_allow_html=True)
 st.markdown(
     """
     <hr style="border-top: 1px solid #444; margin: 40px 0;">
     <p style="text-align: center; color: #aaa; font-size: 15px; margin-bottom: 30px;">
-    Built solo by <strong>Freda Erinmwingbovo</strong> • Production-ready • 
-    Safer & Smart, Gorgias & Intercom • December 2025
+    Built solo by <strong>Freda Erinmwingbovo</strong> • Lagos, Nigeria • 
+    Production-ready • Safer than Zendesk, Gorgias & Intercom • December 2025
     </p>
     """,
     unsafe_allow_html=True
