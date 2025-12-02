@@ -17,8 +17,10 @@ A complete, production-ready ML system that auto-routes support tickets with **8
 - Built and shipped solo in 3.5 weeks
 
 ### Live Demo in Action
+**Live Demo** → https://support-ticket-triage.streamlit.app/  
 - Real ticket → balloons + **FULLY AUTO-TRIAGED**
 - Spam / off-topic → **HUMAN REVIEW SUGGESTED** with visible low confidence %
+**2-Min Walkthrough** → (recording in 5 mins – we’ll add this next)
 
 ### Tech Stack
 Python • Scikit-learn • Pandas • Streamlit • Joblib
