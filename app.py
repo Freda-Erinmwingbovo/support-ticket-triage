@@ -240,10 +240,11 @@ st.markdown(
     """
     <hr style="border-top: 1px solid #444; margin: 40px 0;">
     <p style="text-align: center; color: #aaa; font-size: 15px; margin-bottom: 30px;">
-    Built solo by <strong>Freda Erinmwingbovo</strong> • Lagos, Nigeria • 
-    Production-ready • Safer than Zendesk • December 2025
+    Built solo by <strong>Freda Erinmwingbovo</strong> • Abuja, Nigeria • 
+    Production-ready • Smart AI • December 2025
     </p>
     """,
     unsafe_allow_html=True
 )
+
 
