@@ -1,5 +1,5 @@
 # ============================================================
-# app.py — STREAMLIT-CLOUD SAFE & ENHANCED — DEC 01 2025
+# app.py — FINAL WITH HISTORY TAB + ALL YOUR UPGRADES — DEC 2025
 # ============================================================
 import streamlit as st
 import pandas as pd
@@ -10,11 +10,7 @@ import os
 import re
 import streamlit.components.v1 as components
 
-st.set_page_config(
-    page_title="ML Support Brain",
-    page_icon="🚀",
-    layout="wide",
-)
+st.set_page_config(page_title="ML Support Brain", page_icon="rocket", layout="wide")
 
 # ------------------------- MODEL LOADING -------------------------
 @st.cache_resource
@@ -25,11 +21,15 @@ def load_models():
         p_priority = hf_hub_download(repo_id=repo, filename="priority_classifier_PROD_compressed.pkl", repo_type="dataset")
         p_queue = hf_hub_download(repo_id=repo, filename="queue_routing_PROD_compressed.pkl", repo_type="dataset")
     except Exception as e:
-        st.error(f"❌ Failed to download models: {e}")
+        st.error(f"Failed to download models: {e}")
         st.stop()
     return joblib.load(p_type), joblib.load(p_priority), joblib.load(p_queue)
 
 model_type, model_priority, model_queue = load_models()
+
+# ------------------------- SESSION STATE FOR HISTORY -------------------------
+if "history" not in st.session_state:
+    st.session_state.history = []   # In-memory history (clears on refresh)
 
 # ------------------------- CLEANING & PREDICTION -------------------------
 def clean_text(t):
@@ -88,13 +88,14 @@ def predict_ticket(subject="", body="", queue="", th_priority=0.80, th_queue=0.8
         "final_action": final_action
     }
 
-# ------------------------- LOGGING -------------------------
+# ------------------------- LOGGING + ADD TO HISTORY -------------------------
 LOG_FILE = "data/prediction_log.csv"
 os.makedirs("data", exist_ok=True)
 if not os.path.exists(LOG_FILE):
     pd.DataFrame(columns=["timestamp","subject","ticket_type","priority","queue","auto_queue","action"]).to_csv(LOG_FILE,index=False)
 
-def log_prediction(subject, result):
+def save_and_log(subject, result):
+    # Save to CSV
     log_df = pd.read_csv(LOG_FILE)
     new_row = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -106,93 +107,108 @@ def log_prediction(subject, result):
         "action": result["final_action"]
     }
     log_df = pd.concat([log_df, pd.DataFrame([new_row])], ignore_index=True)
-    log_df.to_csv(LOG_FILE,index=False)
+    log_df.to_csv(LOG_FILE, index=False)
+
+    # Add to in-memory history
+    st.session_state.history.append({
+        "Time": datetime.now().strftime("%H:%M:%S"),
+        "Subject": subject[:45] + "..." if len(subject) > 45 else subject,
+        "Type": result["ticket_type"],
+        "Priority": (result["auto_set_priority"] or result["predicted_priority"] or "—").upper(),
+        "Queue": result["auto_route_to"] or result["predicted_queue"],
+        "Action": result["final_action"].split(" → ")[0]
+    })
+
+# ------------------------- TABS -------------------------
+tab1, tab2 = st.tabs(["Triager", "History"])
+
+# ========================= TRIAGER TAB =========================
+with tab1:
+    st.title("Live Support Ticket Auto-Triage Engine")
+    st.markdown("*The smartest, safest support AI ever built*")
+
+    col1, col2 = st.columns([2,1])
+    with col1:
+        st.markdown("### *Subject* <span style='color:red'>*</span>", unsafe_allow_html=True)
+        subject = st.text_area("", placeholder="Type the subject here...", key="subject", height=50, label_visibility="collapsed")
+        st.markdown("### *Body* <span style='color:red'>*</span>", unsafe_allow_html=True)
+        body = st.text_area("", placeholder="Paste full customer message here...", key="body", height=200, label_visibility="collapsed")
+
+        # JS for Enter → next field
+        components.html("""
+        <script>
+        const subjectInput = window.parent.document.querySelector('textarea[id^="subject"]');
+        const bodyInput = window.parent.document.querySelector('textarea[id^="body"]');
+        function handleEnter(e, nextInput) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                nextInput.focus();
+            }
+        }
+        if (subjectInput && bodyInput) {
+            subjectInput.addEventListener('keydown', (e) => handleEnter(e, bodyInput));
+            bodyInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) e.preventDefault();
+            });
+        }
+        </script>
+        """, height=0)
+
+    with col2:
+        queue_hint = st.text_input("Current Queue (optional)", placeholder="e.g. billing, technical")
+
+    subject_filled = bool(subject.strip())
+    body_filled = bool(body.strip())
+    triage_disabled = not (subject_filled and body_filled)
+
+    if not subject_filled or not body_filled:
+        st.warning("Both Subject and Body are required to triage a ticket.")
+
+    if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, disabled=triage_disabled):
+        with st.spinner("Analyzing ticket..."):
+            result = predict_ticket(subject, body, queue_hint, st.session_state.th_p, st.session_state.th_q)
+            save_and_log(subject, result)
+
+        st.success("Triage Complete!")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Ticket Type", result["ticket_type"], f"{result['type_confidence']:.1%}")
+        c2.metric("Priority", (result["auto_set_priority"] or result["predicted_priority"]).upper(),
+                  f"{result['priority_confidence']:.1%}")
+        c3.metric("Queue", result["auto_route_to"] or result["predicted_queue"], f"{result['queue_confidence']:.1%}")
+
+        st.markdown(f"## {result['final_action']}")
+        if result["auto_route_to"]:
+            st.balloons()
+            st.success(f"AUTO-ROUTED TO → *{result['auto_route_to']}*")
+        else:
+            st.warning("No auto-routing — model is not confident enough")
+
+# ========================= HISTORY TAB =========================
+with tab2:
+    st.header("Triage History")
+    if st.session_state.history:
+        df_hist = pd.DataFrame(st.session_state.history)
+        st.dataframe(df_hist, use_container_width=True, hide_index=True)
+        if st.button("Clear History (this session only)"):
+            st.session_state.history = []
+            st.rerun()
+    else:
+        st.info("No tickets triaged in this session yet. Go to the **Triager** tab and start!")
 
 # ------------------------- SIDEBAR -------------------------
 with st.sidebar:
     st.image("https://em-content.zobj.net/source/skype/289/rocket_1f680.png", width=100)
     st.title("ML Support Brain")
     st.caption("Type → Priority → Queue • 88.8% accuracy")
-
     log_df = pd.read_csv(LOG_FILE)
     total = len(log_df)
     st.metric("Tickets Processed", total)
     if total > 0:
         auto_rate = (log_df["auto_queue"].sum()/total)*100
         st.metric("Auto-Routed Rate", f"{auto_rate:.1f}%")
-
     st.divider()
     st.info("*Global Auto-Action Thresholds*\n• Only act when confidence ≥ these values\n• Lower = more automation\n• Current = ultra-safe (~30%)")
     st.session_state.th_p = st.slider("Auto-Priority Threshold",0.50,1.00,0.80,0.01)
     st.session_state.th_q = st.slider("Auto-Queue Threshold",0.50,1.00,0.85,0.01)
 
-# ------------------------- MAIN UI -------------------------
-st.title("Live Support Ticket Auto-Triage Engine")
-st.markdown("*The smartest, safest support AI ever built*")
-
-col1, col2 = st.columns([2,1])
-with col1:
-    st.markdown("### *Subject* <span style='color:red'>*</span>", unsafe_allow_html=True)
-    subject = st.text_area("", placeholder="Type the subject here...", key="subject", height=50, label_visibility="collapsed")
-    st.markdown("### *Body* <span style='color:red'>*</span>", unsafe_allow_html=True)
-    body = st.text_area("", placeholder="Paste full customer message here...", key="body", height=200, label_visibility="collapsed")
-
-    # ------------------------- Hidden JS for Enter/Shift+Enter -------------------------
-    components.html("""
-    <script>
-    const subjectInput = window.parent.document.querySelector('textarea[id^="subject"]');
-    const bodyInput = window.parent.document.querySelector('textarea[id^="body"]');
-
-    function handleEnter(e, nextInput) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            nextInput.focus();
-        }
-    }
-
-    if (subjectInput && bodyInput) {
-        subjectInput.addEventListener('keydown', (e) => handleEnter(e, bodyInput));
-        bodyInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) e.preventDefault();
-        });
-    }
-    </script>
-    """, height=0, scrolling=False)
-
-with col2:
-    queue_hint = st.text_input("Current Queue (optional)", placeholder="e.g. billing, technical")
-
-# ------------------------- TRIAGE BUTTON -------------------------
-subject_filled = bool(subject.strip())
-body_filled = bool(body.strip())
-
-# Dynamic warnings
-if not subject_filled and body_filled:
-    st.warning("⚠️ Subject is required before submitting.")
-elif subject_filled and not body_filled:
-    st.warning("⚠️ Body is required before submitting.")
-elif not subject_filled and not body_filled:
-    st.warning("⚠️ Both Subject and Body are required to triage a ticket.")
-
-triage_disabled = not (subject_filled and body_filled)
-
-if st.button("TRIAGE THIS TICKET", type="primary", use_container_width=True, disabled=triage_disabled):
-    with st.spinner("Analyzing ticket..."):
-        result = predict_ticket(subject, body, queue_hint, st.session_state.th_p, st.session_state.th_q)
-        log_prediction(subject, result)
-
-    st.success("Triage Complete!")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Ticket Type", result["ticket_type"], f"{result['type_confidence']:.1%}")
-    c2.metric("Priority", (result["auto_set_priority"] or result["predicted_priority"]).upper(),
-              f"{result['priority_confidence']:.1%}")
-    c3.metric("Queue", result["auto_route_to"] or result["predicted_queue"], f"{result['queue_confidence']:.1%}")
-
-    st.markdown(f"## {result['final_action']}")
-    if result["auto_route_to"]:
-        st.balloons()
-        st.success(f"AUTO-ROUTED TO → *{result['auto_route_to']}*")
-    else:
-        st.warning("No auto-routing — model is not confident enough")
-
-st.caption("Built solo in 2 weeks • Safe & Smart AI • Production-ready today")
+st.caption("Built solo by Freda Erinmwingbovo • Production-ready • Safe & Smart")
