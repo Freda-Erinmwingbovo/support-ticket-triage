@@ -206,7 +206,7 @@ with tab2:
         st.dataframe(pd.DataFrame(st.session_state.history), use_container_width=True, hide_index=True)
 
         with st.expander("Admin Tools (protected)", expanded=False):
-            pwd = st.text_input("Admin password", type="password", placeholder="Enter 5214")
+            pwd = st.text_input("Admin password", type="password", placeholder="Enter Password")
             if pwd == "5214":
                 st.success("Authorized")
                 if st.button("Clear ALL data (session + log)", type="primary"):
@@ -246,3 +246,4 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
