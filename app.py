@@ -1,6 +1,7 @@
 # ============================================================
-# app.py — 100% WORKING FINAL VERSION — NO MORE ERRORS
-# Admin password: 5214 | Nigeria GMT+1 | December 2025
+# app.py — FINAL PRO VERSION (ready for public launch)
+# Admin password → set in Streamlit Secrets (never in code)
+# Built by Freda Erinmwingbovo • Abuja, Nigeria • December 2025
 # ============================================================
 import streamlit as st
 import pandas as pd
@@ -123,24 +124,18 @@ def save_and_log(subject, result):
 # ------------------------- ADMIN CLEAR — SAFE -------------------------
 def admin_clear_all():
     now = datetime.now(WAT).strftime("%Y-%m-%d %H:%M:%S")
-    # Log the action first
     pd.DataFrame([{
-        "timestamp": now,
-        "subject": "ADMIN CLEAR",
-        "ticket_type": "—",
-        "priority": "—",
-        "queue": "—",
-        "auto_queue": False,
+        "timestamp": now, "subject": "ADMIN CLEAR", "ticket_type": "—",
+        "priority": "—", "queue": "—", "auto_queue": False,
         "action": "All data cleared by admin"
     }]).to_csv(LOG_FILE, index=False)
-    # Then wipe
     open(LOG_FILE, 'w').close()
     pd.DataFrame(columns=["timestamp","subject","ticket_type","priority","queue","auto_queue","action"]).to_csv(LOG_FILE, index=False)
     st.session_state.history = []
     st.success(f"All data cleared • Logged at {now} (WAT)")
     st.rerun()
 
-# ------------------------- TABS (MUST BE AFTER ALL FUNCTIONS) -------------------------
+# ------------------------- TABS -------------------------
 tab1, tab2 = st.tabs(["Triager", "History"])
 
 # ========================= TRIAGER TAB =========================
@@ -206,12 +201,26 @@ with tab2:
         st.dataframe(pd.DataFrame(st.session_state.history), use_container_width=True, hide_index=True)
 
         with st.expander("Admin Tools (protected)", expanded=False):
-            pwd = st.text_input("Admin password", type="password", placeholder="Enter Password")
-            if pwd == "5214":
+            pwd = st.text_input("Admin password", type="password", placeholder="Enter password")
+            
+            if pwd == st.secrets.get("ADMIN_PASSWORD", "___NEVER_MATCH___"):
                 st.success("Authorized")
-                if st.button("Clear ALL data (session + log)", type="primary"):
+
+                log_df = safe_read_log()
+                if len(log_df) > 0:
+                    csv = log_df.to_csv(index=False).encode()
+                    st.download_button(
+                        "📥 Download full log (CSV)",
+                        csv,
+                        f"triage_log_{datetime.now(WAT).strftime('%Y%m%d')}.csv",
+                        "text/csv",
+                        use_container_width=True
+                    )
+
+                if st.button("🗑️ Clear ALL data (session + permanent log)", type="primary", use_container_width=True):
                     admin_clear_all()
-            elif pwd:
+
+            elif pwd and pwd != st.secrets.get("ADMIN_PASSWORD", "___NEVER_MATCH___"):
                 st.error("Wrong password")
     else:
         st.info("No tickets yet → go to **Triager** tab!")
@@ -246,5 +255,3 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-
